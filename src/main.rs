@@ -1,24 +1,66 @@
 
-use nix::{sys::wait::waitpid,unistd::{fork, ForkResult, write, Pid}};
+use nix::{unistd::{fork, ForkResult, Pid}};
 
 fn main() {
 
-    let childpid : Pid;
-
+    println!("Parent: Attempting to fork");
     match unsafe{fork()} {
-        Ok(ForkResult::Parent{child} ) => childpid = child,
 
-        Ok(ForkResult::Child) => {
-            match nix::sys::ptrace::traceme() {
-                Ok(_) => println!("Trace succcessful"),
-                
-                Err(err) => panic!("Trace failed with error {}", err)           
-            }
-
-            unsafe { libc::_exit(0) }       
+    Ok(ForkResult::Parent{child} ) => {
+    
+        println!("Parent : Waiting for child");
+        match nix::sys::wait::waitpid(child, None) {
+            Ok(_) => println!("Parent: Finished waiting"),
+            
+            Err(err) => panic!("Parent: Could not wait {}", err)  
         }
 
 
-        Err(_) => panic!("Fork failed")
-     }
+        loop {
+            match nix::sys::ptrace::syscall(child, None) {
+                Ok(_) => {},
+                Err(_) => panic!("Could not ptrace for syscall")
+            }
+            
+            match nix::sys::wait::waitpid(child, None) {
+                Ok(_) => {},
+                
+                Err(err) => panic!("Parent: Could not wait {}", err)  
+            }
+
+            match nix::sys::ptrace::getregs(child) {
+                Ok(regs) => {
+                    println!("r15 {}",regs.r15);
+                    println!("rax {}",regs.rax);
+                    println!("rbx {}",regs.rbx);
+                    println!("gs {}",regs.gs);
+                },
+
+                Err(_) => { 
+                    println!("Parent: Child exited");
+                    return;
+                }
+            };
+        }
+    }
+
+
+
+    Ok(ForkResult::Child) => {
+        match nix::sys::ptrace::traceme() {
+            Ok(_) => println!("Child: Trace succcessful"),
+            
+            Err(err) => panic!("Child: Trace failed with error {}", err)           
+        }
+        
+        { 
+            exec::execvp("cat", &["cat","/etc/hosts"]);        
+        }       
+    }
+    
+    Err(_) => panic!("Parent: Fork failed")
+
+    }
+
+
 }

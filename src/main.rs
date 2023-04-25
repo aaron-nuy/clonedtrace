@@ -1,11 +1,24 @@
 
 use nix::{unistd::{fork, ForkResult, Pid}};
+use std::env;
+use json::*;
 
 fn main() {
+    let mut args: Vec<String> = env::args().collect();
 
+    args.remove(0);
+
+    if args.len() < 1 {
+        panic!("Not enough arguments, quitting.");
+    }
+
+    let js = std::fs::read_to_string("syscalls.json").unwrap();
+    let syscalls = parse(&js).unwrap();
+
+    println!("{}", syscalls["aaData"][0][1].as_str().unwrap());
     println!("Parent: Attempting to fork");
-    match unsafe{fork()} {
 
+    match unsafe{fork()} {
     Ok(ForkResult::Parent{child} ) => {
     
         println!("Parent : Waiting for child");

@@ -1,4 +1,3 @@
-
 use nix::{unistd::{fork, ForkResult}};
 use std::env;
 use json::*;

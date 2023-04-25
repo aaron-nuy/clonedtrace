@@ -1,4 +1,5 @@
 
+use libc::int64_t;
 use nix::{unistd::{fork, ForkResult, Pid}};
 use std::env;
 use json::*;
@@ -15,7 +16,6 @@ fn main() {
     let js = std::fs::read_to_string("syscalls.json").unwrap();
     let syscalls = parse(&js).unwrap();
 
-    println!("{}", syscalls["aaData"][0][1].as_str().unwrap());
     println!("Parent: Attempting to fork");
 
     match unsafe{fork()} {
@@ -28,7 +28,7 @@ fn main() {
             Err(err) => panic!("Parent: Could not wait for traceme call {}", err)  
         }
 
-
+        let mut enterCall = false;
         loop {
             match nix::sys::ptrace::syscall(child, None) {
                 Ok(_) => {},
@@ -41,19 +41,20 @@ fn main() {
                 Err(err) => panic!("Parent: Could not wait {}", err)  
             }
 
-            match nix::sys::ptrace::getregs(child) {
-                Ok(regs) => {
-                    println!("r15 {}",regs.r15);
-                    println!("rax {}",regs.rax);
-                    println!("rbx {}",regs.rbx);
-                    println!("gs {}",regs.gs);
-                },
+            if !false {
+                match nix::sys::ptrace::getregs(child) {
+                    Ok(regs) => {
+                        let syscode = regs.orig_rax as usize;
+                        println!("{}({},{},{},{},{})", syscalls["aaData"][syscode][1], regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8 );
+                    },
 
-                Err(_) => { 
-                    println!("Parent: Child exited");
-                    return;
-                }
-            };
+                    Err(_) => { 
+                        println!("Parent: Child exited");
+                        return;
+                    }
+                };
+            }
+            enterCall = !enterCall;
         }
     }
 
@@ -67,7 +68,7 @@ fn main() {
         }
         
         { 
-            exec::execvp("cat", &["cat","/etc/hosts"]);        
+            exec::execvp(&args[0], &args);           
         }       
     }
     

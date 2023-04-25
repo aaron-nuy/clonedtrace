@@ -1,6 +1,5 @@
 
-use libc::int64_t;
-use nix::{unistd::{fork, ForkResult, Pid}};
+use nix::{unistd::{fork, ForkResult}};
 use std::env;
 use json::*;
 
@@ -41,7 +40,7 @@ fn main() {
                 Err(err) => panic!("Parent: Could not wait {}", err)  
             }
 
-            if !false {
+            if !enterCall {
                 match nix::sys::ptrace::getregs(child) {
                     Ok(regs) => {
                         let syscode = regs.orig_rax as usize;

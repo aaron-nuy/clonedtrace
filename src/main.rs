@@ -21,11 +21,11 @@ fn main() {
     match unsafe{fork()} {
     Ok(ForkResult::Parent{child} ) => {
     
-        println!("Parent : Waiting for child");
+        println!("Parent : Waiting for child to call traceme");
         match nix::sys::wait::waitpid(child, None) {
-            Ok(_) => println!("Parent: Finished waiting"),
+            Ok(_) => {},
             
-            Err(err) => panic!("Parent: Could not wait {}", err)  
+            Err(err) => panic!("Parent: Could not wait for traceme call {}", err)  
         }
 
 
